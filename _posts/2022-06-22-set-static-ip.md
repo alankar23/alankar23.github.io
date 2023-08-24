@@ -6,17 +6,17 @@ tags: [linux, networking]
 
 ---
 
-# How to set static ip for your linux machine
+# Configuring a Static IP Address for Your Linux Machine
 
-First, you need to make sure you have root privelges only then you can set static ip for your machine
+To ensure a seamless setup of a static IP for your Linux machine, it's imperative to have root privileges. This privilege level is essential for establishing a static IP effectively. Assuming you possess the necessary superuser privileges, let's delve into the process.
 
-I hope you have super user privleges so lets jump into it.
+Navigate to the 'netplan' Directory
 
-cd into etc/netplan/
+Commence by accessing the 'netplan' directory. This can be accomplished by executing the following command
     
     cd etc/netplan
 
-Here youll find a file named something like "00-netplan". If you dont have any file create one and paste the code block below.
+Within the `etc/netplan` directory, a file named something like `00-netplan` awaits your attention. In case this file is absent, you should create one. Subsequently, insert the code block provided below into this file.
 
     # This is the network config written by Alankar
     network:
@@ -29,49 +29,53 @@ Here youll find a file named something like "00-netplan". If you dont have any f
             addresses:
             - 8.8.8.8
             - 8.8.4.4
-            search: []
     version: 2
 
-Okay, now I'll explain what each line means
+Understanding the Configuration
 
-## Addresses 
+Let's decipher the significance of each line within the configuration:
+
+## Static IP Address Assignment:
+
     addresses:
     - 192.168.1.10/24
 
-In this line `192.168.1.10` is the static ip address which I want to assign to the machine, youll need to add `/24` at the end.
+In this segment, the address "192.168.1.10" signifies the desired static IP address for the machine. It's crucial to append "/24" at the end.
 
-## Gateway
+## Network Gateway Specification:
     gateway4: 192.168.1.254
 
-This is your network gateway, you can find this by running.
+This value corresponds to the network gateway or router IP. Identifying this can be achieved by executing the command:
+
 ```
 $ ip r | grep default
 default via 192.168.1.254 dev wlp8s0 proto dhcp metric 600
 ```
-so, `192.168.1.254` is my router ip / gateway ip.
 
-## Nameserver
+so, `192.168.1.254` is my router ip / gateway ip in my context..
+
+## DNS Server Configuration:
 
     nameservers:
         addresses:
         - 8.8.8.8
         - 8.8.4.4
 
-This block contains your dns records, I'm using googles dns `8.8.8.8` and `8.8.4.4`. You can use cloudflairs dns or your custom dns similarly.
+This section contains the DNS records. My preference is Google's DNS, namely `8.8.8.8` and `8.8.4.4`. Alternatively, you can opt for Cloudflare's DNS or any custom DNS of your choice.
 
-## Applying Changes
+## Applying Changes:
 
-To apply the changes 
+To implement the configured changes, execute the subsequent commands:
+ 
 ```
 $ sudo netplan generate
-```
-Then,
-```
 $ sudo netplan apply
 ```
 
-Now, reboot the system for the changes to take place.
-After this you can
+## Finalizing the Process:
+
+Following the implementation of changes, a system reboot is necessary for the alterations to take effect. Once this step is concluded, you can ascertain the success of the operation by executing either of the following commands
+
 ```
 ip r
 ```
@@ -79,9 +83,9 @@ or
 ```
 hostname -I
 ```
-youll get something like this
-
+The output should resemble:
     
     192.168.1.10  
 
 
+This confirms the successful assignment of the specified static IP to your Linux machine.
