@@ -23,7 +23,7 @@ timezone:
 
 title: Alankar Nimgade                          # the main title
 
-tagline: A multi deciplined IT engineer   # it will display as the sub-title
+tagline: Mastering Code and Deployment, Unifying Development Artistry with DevOps Ingenuity   # it will display as the sub-title
 
 description: >-                        # used by seo meta and the atom feed
   A minimal, responsive, and powerful Jekyll theme for presenting professional writing.
@@ -41,7 +41,7 @@ social:
   # Change to your full name.
   # It will be displayed as the default author of the posts and the copyright owner in the Footer
   name: Alankar Nimgade
-  email: example@doamin.com             # change to your email address
+  email: alankar@duck.com             # change to your email address
   links:
     # The first element serves as the copyright owner's link
     - https://twitter.com/username      # change to your twitter homepage
@@ -73,8 +73,7 @@ google_analytics:
 #     light  - Use the light color scheme
 #     dark   - Use the dark color scheme
 #
-theme_mode:   # [light|dark]
-
+theme_mode: dark
 # The CDN endpoint for images.
 # Notice that once it is assigned, the CDN url
 # will be added to all image (site avatar & posts' images) paths starting with '/'
