@@ -64,10 +64,9 @@ Remember: A backup is only as good as its latest test restore!
 
 ## How to Back Up etcd
 
-### Our Cluster Etcd Information
+### Cluster etcd Information
 
-Well need etcd version and certificates  for this.
-
+To back up etcd, you’ll need the etcd version and the necessary certificates. Start by retrieving the details of your etcd pod:
 ```
 $ kubectl describe pods -n kube-system etcd-k8s-master
 
@@ -130,17 +129,20 @@ Volumes:
     Path:          /var/lib/etcd
     HostPathType:  DirectoryOrCreate
 ```
-We need the etcd version by looking at the image tag.
+### etcd Version:
+
+The etcd version can be found in the image tag of the pod:
 
     Image:registry.k8s.io/etcd:3.5.12-0
-
-And certificates paths
+### Certificates:
+Ensure you have the correct certificate paths to access etcd securely:
 
 	--cert-file=/etc/kubernetes/pki/etcd/server.crt
 	--key-file=/etc/kubernetes/pki/etcd/server.key                                           
 	--trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
+### Certificate Host Location:
 
-And their host location in `Volumes` section
+The certificate files are mounted from the host to the pod, as seen in the `Volumes` section
 
   Volumes:
     etcd-certs:
@@ -148,22 +150,26 @@ And their host location in `Volumes` section
       Path:          /etc/kubernetes/pki/etcd
       HostPathType:  DirectoryOrCreate
 
-### Prep
-Will need to copy the certificates from master nodes directory `/etc/kubernetes/pki/etcd/` to our machine for auth in etcd/certs directory
-```
+### **Prep**
+
+To start, we need to copy the certificates from the master node’s directory `/etc/kubernetes/pki/etcd/` to your local machine’s `etcd/certs` directory for authentication with etcd.  
+
+Example of the file structure in the `etcd/certs` directory:  
+```bash
 $ ls -l etcd/certs
-   rwxrwxrwx   1   alankar   alankar      1 KiB   Sun Nov  3 14:49:02 2024    ca.crt 
-   rwxrwxrwx   1   alankar   alankar      1 KiB   Sun Nov  3 14:49:02 2024    server.crt 
-   rwxrwxrwx   1   alankar   alankar      1 KiB   Sun Nov  3 14:49:02 2024    server.key 
+-rwxrwxrwx 1 user user 1 KiB Sun Nov 3 14:49:02 2024 ca.crt
+-rwxrwxrwx 1 user user 1 KiB Sun Nov 3 14:49:02 2024 server.crt
+-rwxrwxrwx 1 user user 1 KiB Sun Nov 3 14:49:02 2024 server.key
 ```
 
-We'll use docker to run etcd and a cron job to run this container and get the snapshot file.
-#### Dockerfile
+Next, we’ll use Docker to run the etcd container, and set up a cron job to regularly execute the container and capture a snapshot of the etcd data.
 
-##### Why running etcd in docker container
-The idea on why running etcd backup container is, if in feature we upgrade our cluster (including etcd) to 3.n version we'll need to upgrade our etcd in backup system as well. so to make our life easier will just need to change the image tag in our compose file.
+### **Dockerfile**
 
-Our Dockerfile 
+#### **Why Run etcd in a Docker Container?**  
+Running the etcd backup container in Docker offers flexibility for future upgrades. If we decide to upgrade our cluster (including etcd) to a newer version, we’ll also need to upgrade the etcd backup system. Instead of manually managing version updates, we can simply update the image tag in our Docker Compose file, making the process much easier.
+
+#### **Our Dockerfile**  
 
 ```
 services:
@@ -177,14 +183,16 @@ services:
       - ./backup:/backup
 ```
 
-we have mounted our certs and backup directory on the container and using `etcdctl snapshot save` command to take the snapshot backup.
+In this setup, we've mounted the necessary certificates and the backup directory into the container. We use the `etcdctl snapshot save` command to create the snapshot backup.
 
-If we run this container we get
-```
-$ docker compose up              
+#### **Running the Container**  
+When we run the container using Docker Compose, we should see the following output:  
+
+```bash
+$ docker compose up  
 [+] Running 2/0
- ⠿ Network etcd-backup_default   Created                                                                                                                                                             0.0s
- ⠿ Container etcd-backup-etcd-1  Created                                                                                                                                                             0.0s
+ ⠿ Network etcd-backup_default   Created                                                                                                      0.0s  
+ ⠿ Container etcd-backup-etcd-1  Created                                                                                                      0.0s
 Attaching to etcd-backup-etcd-1
 etcd-backup-etcd-1  | {"level":"info","ts":"2024-11-15T08:19:48.879484Z","caller":"snapshot/v3_snapshot.go:65","msg":"created temporary db file","path":"/backup/snapshot.db.part"}
 etcd-backup-etcd-1  | {"level":"info","ts":"2024-11-15T08:19:49.029314Z","logger":"client","caller":"v3@v3.5.12/maintenance.go:212","msg":"opened snapshot stream; downloading"}
@@ -195,12 +203,13 @@ etcd-backup-etcd-1  | {"level":"info","ts":"2024-11-15T08:20:13.355275Z","caller
 etcd-backup-etcd-1  | Snapshot saved at /backup/snapshot.db
 ```
 
-And Vola our etcd backup container works
+And voilà! Our etcd backup container is now up and running, successfully saving the snapshot.
 
-### Automating this backup
+### **Automating the Backup**
 
-We ll create a shell script and execute this shell script via crontab.
-#### Shell script
+#### **Shell Script**
+
+Create the backup shell script (`etcd.sh`), which will run the Docker Compose command and compress each snapshot file with a date and time stamp to reduce its size:
 
 ```
 $ cat etcd.sh
@@ -235,10 +244,11 @@ zip -r "$DEST_DIR/$ZIP_NAME" "$SOURCE_DIR"
 echo "Created zip file: $DEST_DIR/$ZIP_NAME"
 ```
 
-Basically here were getting the backup with docker compose and compressing each file to reduce its size with date and time stamp.
+Basically this script runs the Docker Compose backup and then compresses the resulting snapshot file, saving it with a timestamp to help organize backups.
 
+#### **Crontab**
 
-#### Crontab
+We’ll now schedule this script to run every 12 hours using **crontab**. This way, backups will be taken automatically without manual intervention.
 
 ```
 $ crontab -l
@@ -246,8 +256,9 @@ $ crontab -l
 ```
 We are running our script at every 12 th our of the day and spitting the output in `etcd.log`
 
-Seeing the etcd.log
+#### **Checking the Backup Output**
 
+You can check the log file (`etcd.log`) to see the backup process in action:
 ```
 $ cat etcd.log 
 Run Time is 12-00
@@ -257,6 +268,7 @@ etcd-etcd-1 exited with code 0
   adding: backup/snapshot.db (deflated 69%)
 Created zip file: backup/15-11/etcd-12-00.zip
 ```
+You can also verify the backups in the `backup` directory:
 
 ```
 $ ls -l  backup/
@@ -269,11 +281,15 @@ total 29024
 ```
 
 
-## Restoring etcd
+### **Restoring etcd**
 
-### Deflate the snapshot.db
+To restore an etcd snapshot:
 
-Extact the zip file and youll get a snapshot.db and use this compose file
+1. **Extract the Snapshot**:  
+   Decompress the zip file to retrieve the `snapshot.db`.
+
+2. **Use the Compose File**:  
+   In the restore folder, you'll find a `member` directory, which you’ll need to copy to your master node.
 
 ```
 services:
@@ -290,10 +306,13 @@ services:
 $ ls restore/
  member
 ```
+Copy the member directory to your master nod.
 
-Copy this member directory to your master node and edit the `etcd.yaml` static pod at `/etc/kubernetes/manifests`
+3. **Update the `etcd.yaml` Static Pod**:  
+Copy the member directory to your master node and edit the `etcd.yaml` static pod at `/etc/kubernetes/manifests`
 
-change this path to
+
+Change this path to
 ```
   - hostPath:
       path: /var/lib/etcd
@@ -301,8 +320,7 @@ change this path to
     name: etcd-data
 ```
 
-to
-
+To this:
 ```
   - hostPath:
       path: /var/newData/etcd
@@ -310,4 +328,6 @@ to
     name: etcd-data
 ```
 
-wait for few minutes and your changes will be reflected
+4. **Wait for the Changes to Reflect**: 
+
+After editing the static pod file, wait a few minutes for the changes to take effect. Your etcd will now be restored from the snapshot.
